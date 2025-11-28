@@ -165,12 +165,20 @@ module GraphQL
           redis.mapped_hmget(
             "#{redis_key(SUBSCRIPTION_PREFIX)}#{subscription_id}",
             :query_string, :variables, :context, :operation_name
-          ).tap do |subscription|
+          ).then do |subscription|
             next if subscription.values.all?(&:nil?) # Redis returns hash with all nils for missing key
 
-            subscription[:context] = @serializer.load(subscription[:context])
-            subscription[:variables] = JSON.parse(subscription[:variables])
-            subscription[:operation_name] = nil if subscription[:operation_name].strip == ""
+            begin
+              subscription[:context] = @serializer.load(subscription[:context])
+
+              next if subscription[:context].key?(:current_session) && !subscription[:context][:current_session].active?
+
+              subscription[:variables] = JSON.parse(subscription[:variables])
+              subscription[:operation_name] = nil if subscription[:operation_name].strip == ""
+              subscription
+            rescue
+              nil
+            end
           end
         end
       end

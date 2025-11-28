@@ -9,3 +9,4 @@
 Gemfile.lock
 .rspec_status
 /gemfiles/*.lock
+.tool-versions
